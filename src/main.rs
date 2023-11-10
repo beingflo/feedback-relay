@@ -1,7 +1,11 @@
 use std::time::Duration;
 
 use axum::error_handling::HandleErrorLayer;
-use axum::{http::StatusCode, routing::post, Json, Router};
+use axum::{
+    http::StatusCode,
+    routing::{get, post},
+    Json, Router,
+};
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use tower::buffer::BufferLayer;
@@ -27,17 +31,20 @@ struct FeedbackRequest {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
-    let app = Router::new().route("/feedback", post(handler)).layer(
-        ServiceBuilder::new()
-            .layer(HandleErrorLayer::new(|err: BoxError| async move {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Unhandled error: {}", err),
-                )
-            }))
-            .layer(BufferLayer::new(1024))
-            .layer(RateLimitLayer::new(4, Duration::from_secs(60))),
-    );
+    let app = Router::new()
+        .route("/feedback", post(email_handler))
+        .route("/health", get(health_handler))
+        .layer(
+            ServiceBuilder::new()
+                .layer(HandleErrorLayer::new(|err: BoxError| async move {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("Unhandled error: {}", err),
+                    )
+                }))
+                .layer(BufferLayer::new(1024))
+                .layer(RateLimitLayer::new(4, Duration::from_secs(60))),
+        );
 
     axum::Server::bind(&"0.0.0.0:8080".parse().unwrap())
         .serve(app.into_make_service())
@@ -47,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn handler(Json(body): Json<FeedbackRequest>) -> StatusCode {
+async fn email_handler(Json(body): Json<FeedbackRequest>) -> StatusCode {
     match send_email(body.project, body.path, body.email, body.content).await {
         Ok(response) => {
             println!("Email sent with status: {}", response.status());
@@ -62,6 +69,10 @@ async fn handler(Json(body): Json<FeedbackRequest>) -> StatusCode {
             StatusCode::INTERNAL_SERVER_ERROR
         }
     }
+}
+
+async fn health_handler() -> StatusCode {
+    StatusCode::OK
 }
 
 async fn send_email(
