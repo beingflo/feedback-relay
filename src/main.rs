@@ -84,7 +84,7 @@ async fn send_email(
     let api_key = std::env::var("RESEND_API_KEY").expect("Resend api key must be set");
 
     let request = EmailRequest {
-        from: "onboarding@resend.dev".to_string(),
+        from: "info@feedback.marending.dev".to_string(),
         to: vec!["florian@marending.dev".to_string()],
         subject: format!("Feedback: {} - {}", project, path),
         text: format!(
