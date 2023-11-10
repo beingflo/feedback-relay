@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use tower::buffer::BufferLayer;
 use tower::limit::RateLimitLayer;
 use tower::{BoxError, ServiceBuilder};
+use tower_http::cors::{AllowHeaders, AllowMethods, CorsLayer};
 
 #[derive(Serialize)]
 struct EmailRequest {
@@ -31,6 +32,13 @@ struct FeedbackRequest {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
+    let origins = vec![
+        "https://marending.dev".parse().unwrap(),
+        "https://rest.quest".parse().unwrap(),
+        "https://go.rest.quest".parse().unwrap(),
+        "https://dd.rest.quest".parse().unwrap(),
+    ];
+
     let app = Router::new()
         .route("/feedback", post(email_handler))
         .route("/health", get(health_handler))
@@ -44,6 +52,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }))
                 .layer(BufferLayer::new(1024))
                 .layer(RateLimitLayer::new(4, Duration::from_secs(60))),
+        )
+        .layer(
+            CorsLayer::new()
+                .allow_origin(origins)
+                .allow_methods(AllowMethods::any())
+                .allow_headers(AllowHeaders::any()),
         );
 
     axum::Server::bind(&"0.0.0.0:8008".parse().unwrap())
