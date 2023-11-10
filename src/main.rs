@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .layer(RateLimitLayer::new(4, Duration::from_secs(60))),
         );
 
-    axum::Server::bind(&"0.0.0.0:8080".parse().unwrap())
+    axum::Server::bind(&"0.0.0.0:8008".parse().unwrap())
         .serve(app.into_make_service())
         .await
         .unwrap();
