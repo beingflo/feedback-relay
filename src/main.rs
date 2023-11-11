@@ -3,6 +3,7 @@ use std::time::Duration;
 use axum::error_handling::HandleErrorLayer;
 use axum::{
     http::StatusCode,
+    response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
@@ -10,6 +11,8 @@ use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use tower::buffer::BufferLayer;
 use tower::limit::RateLimitLayer;
+use tower::load_shed::error::Overloaded;
+use tower::load_shed::LoadShedLayer;
 use tower::{BoxError, ServiceBuilder};
 use tower_http::cors::{AllowHeaders, AllowMethods, CorsLayer};
 
@@ -44,13 +47,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/health", get(health_handler))
         .layer(
             ServiceBuilder::new()
-                .layer(HandleErrorLayer::new(|err: BoxError| async move {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        format!("Unhandled error: {}", err),
-                    )
-                }))
+                .layer(HandleErrorLayer::new(handle_error))
                 .layer(BufferLayer::new(1024))
+                .layer(LoadShedLayer::new())
                 .layer(RateLimitLayer::new(4, Duration::from_secs(60))),
         )
         .layer(
@@ -121,4 +120,12 @@ async fn send_email(
         .json(&request)
         .send()
         .await
+}
+
+async fn handle_error(error: BoxError) -> Response {
+    if error.is::<Overloaded>() {
+        (StatusCode::TOO_MANY_REQUESTS, "Slow down").into_response()
+    } else {
+        (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong").into_response()
+    }
 }
