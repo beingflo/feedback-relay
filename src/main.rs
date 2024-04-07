@@ -40,6 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "https://rest.quest".parse().unwrap(),
         "https://go.rest.quest".parse().unwrap(),
         "https://dd.rest.quest".parse().unwrap(),
+        "https://jour.rest.quest".parse().unwrap(),
     ];
 
     let app = Router::new()
