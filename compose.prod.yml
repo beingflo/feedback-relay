@@ -1,0 +1,15 @@
+services:
+  feedback-relay:
+    image: "ghcr.io/beingflo/feedback-relay:0.1.6"
+    container_name: feedback-relay
+    ports:
+      - 8008:8008
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - caddy_net
+
+networks:
+  caddy_net:
+    external: true
