@@ -3,7 +3,7 @@ die() { echo "$*" 1>&2 ; exit 1; }
 
 echo -e "Deploying feedback-relay to production!"
 
-[ -z "$(git status --porcelain)" ] && die "There are uncommitted changes"
+[ -z "$(git status --porcelain)" ] || die "There are uncommitted changes"
 
 version=$(cargo metadata --format-version=1 --no-deps | jq '.packages[0].version' | tr -d '"')
 
